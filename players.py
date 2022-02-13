@@ -127,6 +127,123 @@ class minimaxAI(connect4Player):
 			if board[row][col] == 0:
 				board[row][col] = position
 				return board
+
+	def rowOfMove(self, board, move, position):
+		topPosition = len(board)
+		for i in range(topPosition):
+			if board[topPosition - i - 1][move] == position:
+				rowOfMove = topPosition - i
+		return rowOfMove
+
+	def horWin(self, board, move, position):
+		inARow = 0
+		rowOfMove = self.rowOfMove(board, move, position)
+		for col in range(board[0]):
+			if board[rowOfMove][col] == position:
+				inARow += 1
+				if inARow == 4:
+					return True
+			else:
+				inARow = 0
+		return False
+
+	def vertWin(self, board, move, position):
+		rowOfMove = self.rowOfMove(board, move, position)
+		if rowOfMove < 3:
+			False
+		else:
+			return (board[rowOfMove - 1][move] == position & board[rowOfMove  - 2][move] == position & board[rowOfMove - 3][move] == position)
+
+	def leftDiagWin(self, board, move, position):
+		inARow = 0
+		rowOfMove = self.rowOfMove(board, move, position)
+		diffOfHeight = len(board) - 1 - rowOfMove
+		diff = min(diffOfHeight, move)
+		x = move - diff
+		y = rowOfMove + diff
+		for i in range(y + 1):
+			if board[y - i][x + i] == position:
+				inARow += 1
+				if inARow == 4:
+					return True
+			else:
+				inARow = 0
+		return False
+	
+	def rightDiagWin(self, board, move, position):
+		inARow = 0
+		rowOfMove = self.rowOfMove(board, move, position)
+		diffOfHeight = len(board) - 1 - rowOfMove
+		diffOfWidth = len(board[0]) - 1 - move
+		diff = min(diffOfHeight, diffOfWidth)
+		x = move + diff
+		y = rowOfMove + diff
+		for i in range(y + 1):
+			if board[y - i][x - i] == position:
+				inARow += 1
+				if inARow == 4:
+					return True
+			else:
+				inARow = 0
+		return False
+
+	def diagWin(self,board, move, position):
+		return (self.leftDiagWin(board, move, position) | self.rightDiagWin(board, move, position))
+
+	def isGameOver(self,board, move, position):
+		if self.horWin(board,move,position) | self.vertWin(board,move,position) | self.diagWin(board,move,position):
+			if position == self.position:
+				return 100
+			else:
+				return -100
+		else:
+			return 0
+
+	def checklist(self, board, row, col):
+		pass
+
+	def sameThreat(threats):
+		pass
+
+	def threats(self,board, position):
+		l = []
+		p1Threats = []
+		p2Threats = []
+		maxThreat = 0
+		for col in range(board[0]):
+			for row in range(board):
+				if board[row][col] != 0:
+					checklist = self.checklist(board, row, col)
+					if checklist[0] == True:
+						if checklist[1] == 1:
+							for i in range(checklist[4]):
+								l.append(checklist[5 + (2 * i)])
+								l.append(checklist[6 + (2 * i)])
+								p1Threats.append(l)
+								l.clear()
+						else:
+							for i in range(checklist[4]):
+								l.append(checklist[5 + (2 * i)])
+								l.append(checklist[6 + (2 * i)])
+								p2Threats.append(l)
+								l.clear()
+					if abs(checklist[2]) > maxThreat:
+						maxThreat = checklist[2]
+		if len(p1Threats) > 1:
+			if not self.sameThreat(p1Threats):
+				maxThreat = 95
+		if len(p2Threats) > 2:
+			if not self.sameThreat(p2Threats):
+				if abs(maxThreat) < 95:
+					maxThreat = -95
+
+	def evaluateBoard(self,board, move, position):
+		gameOver = self.isGameOver(board, move, position)
+		threats = self.threats(board, position)
+		if gameOver != 0:
+			return gameOver
+		else:
+			return threats
 	
 	def maxValue(self, board, depth, curDepth):
 		"""The max part of the minimax algorithm, finds the move max would make
@@ -144,19 +261,19 @@ class minimaxAI(connect4Player):
 		leaves = []
 		if curDepth == 0:
 			for posMove in moves:
-				leaves.append(self.minValue(posMove,depth,curDepth + 1))
+				leaves.append(self.minValue(posMove,depth, curDepth + 1))
 			for node in leaves:
 				if leaves[node] == max(leaves):
 					return node
 		elif curDepth == depth:
 			for posMove in moves:
 				move = self.applyMove(board,posMove, position)
-				eval = self.evaluateBoard(move)
+				eval = self.evaluateBoard(move, posMove, position)
 				leaves.append(eval)
 			return max(leaves)
 		else:
 			for posMove in moves:
-				leaves.append(self.minValue(posMove,depth,curDepth + 1))
+				leaves.append(self.minValue(posMove,depth, curDepth + 1))
 			return max(leaves)
 
 	def minValue(self, board, depth, curDepth):
@@ -179,13 +296,12 @@ class minimaxAI(connect4Player):
 		if curDepth == depth:
 			for posMove in moves:
 				move = self.applyMove(board, posMove, position)
-				eval = self.evaluateBoard(move)
+				eval = self.evaluateBoard(move, posMove, position)
 				leaves.append(eval)
 			return min(leaves)
 		else:
 			for posMove in moves:
-
-				leaves.append(self.maxValue(posMove,depth,curDepth + 1))
+				leaves.append(self.maxValue(posMove,depth, curDepth + 1))
 			return min(leaves)
 			
 	def getMove(self, board, depth):
