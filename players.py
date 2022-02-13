@@ -199,11 +199,225 @@ class minimaxAI(connect4Player):
 		else:
 			return 0
 
+	def vertThreat(self, board, row, col):
+		lastRow = 0
+		count = 0
+		threat = 0
+		threatList = []
+		threatPos = []
+		position = board[row][col]
+		if row == 0:
+			for i in range(len(board)):
+				if board[i][col] == position:
+					count += 1
+				else:
+					break
+			if count == 1:
+				threat = 5
+			elif count == 2:
+				threat = 10
+			else:
+				if board[3][col] == 0:
+					threat = 30
+					threatPos.append(3)
+					threatPos.append(col)
+				else:
+					threat = 0
+			if position != self.position:
+				threat = threat * -1
+		else:
+			for i in range(len(board)):
+				if i > row:
+					if board[i][col] == position:
+						count += 1
+					else:
+						lastRow = i
+						break
+			for i in range(row + 1):
+				if board[row - i][col] == position:
+					count += 1
+				else:
+					break
+			if count == 1:
+				threat = 5
+			elif count == 2:
+				threat = 10
+			else:
+				if board[lastRow][col] == 0:
+					threat = 30
+					threatPos.append(lastRow)
+					threatPos.append(col)
+				else:
+					threat = 0
+			if position != self.position:
+				threat = threat * -1
+		threatList.append(threat)
+		if len(threatPos) > 0:
+			for i in threatPos:
+				threatList.append(i)
+		return threatList
+			
+
+	def horThreat(self, board, row, col):
+		firstCol = 0
+		lastCol = 0
+		count = 0
+		threat = 0
+		threatList = []
+		threatPos = []
+		position = board[row][col]
+		if col == 0:
+			for i in range(len(board[0])):
+				if board[row][i] == position:
+					count += 1
+				else:
+					break
+			if count == 1:
+				threat = 5
+			elif count == 2:
+				threat = 10
+			else:
+				if board[row][3] == 0:
+					if position == 1 & ((row + 1) % 2 == 1):
+						threat = 30
+						threatPos.append(row)
+						threatPos.append(3)
+					elif(position == 2 & ((row + 1) % 2 == 0)):
+						threat = 30
+						threatPos.append(row)
+						threatPos.append(3)
+					else:
+						threat = 20
+				else:
+					threat = 0
+			if position != self.position:
+				threat = threat * -1
+		else:
+			for i in range(len(board[0])):
+				if i > col:
+					if board[row][i] == position:
+						count += 1
+					else:
+						lastCol = i
+						break
+			for i in range(col + 1):
+				if board[row][col - i] == position:
+					count += 1
+				else:
+					firstCol = i
+					break
+			if count == 1:
+				threat = 5
+			elif count == 2:
+				threat = 10
+			else:
+				if (board[row][firstCol] == 0) & (board[row][lastCol] == 0):
+					if position == 1 & ((row + 1) % 2 == 1):
+						threat = 95
+						threatPos.append(row)
+						threatPos.append(firstCol)
+						threatPos.append(row)
+						threatPos.append(lastCol)
+					elif(position == 2 & ((row + 1) % 2 == 0)):
+						threat = 95
+						threatPos.append(row)
+						threatPos.append(firstCol)
+						threatPos.append(row)
+						threatPos.append(lastCol)
+					else:
+						threat = 50
+						threatPos.append(row)
+						threatPos.append(firstCol)
+						threatPos.append(row)
+						threatPos.append(lastCol)
+				elif board[row][firstCol] == 0:
+					if position == 1 & ((row + 1) % 2 == 1):
+						threat = 30
+						threatPos.append(row)
+						threatPos.append(firstCol)
+					elif(position == 2 & ((row + 1) % 2 == 0)):
+						threat = 30
+						threatPos.append(row)
+						threatPos.append(firstCol)
+					else:
+						threat = 20
+				elif board[row][lastCol] == 0:
+					if position == 1 & ((row + 1) % 2 == 1):
+						threat = 30
+						threatPos.append(row)
+						threatPos.append(lastCol)
+					elif(position == 2 & ((row + 1) % 2 == 0)):
+						threat = 30
+						threatPos.append(row)
+						threatPos.append(lastCol)
+					else:
+						threat = 20
+				else:
+					threat = 0
+			if position != self.position:
+				threat = threat * -1
+		threatList.append(threat)
+		if len(threatPos) > 0:
+			for i in threatPos:
+				threatList.append(i)
+		return threatList
+
+	def leftDiagThreat(self, board, row, col):
+		count = 0
+		threat = 0
+		threatList = []
+		threatPos = []
+		position = board[row][col]
+		
+
+	def rightDiagThreat(self, board, row, col):
+		count = 0
+		threat = 0
+		threatList = []
+		threatPos = []
+		position = board[row][col]
+
+	def diagThreat(self, board, row, col):
+		left = self.leftDiagThreat(board, row, col)
+		right = self.rightDiagThreat(board, row, col)
+		if left[2] >= right[2]:
+			return left
+		else:
+			return right
+
 	def checklist(self, board, row, col):
-		pass
+		numThreats = 0
+		checklist = []
+		threatList = []
+		l = []
+		threatList.append(self.vertThreat(board, row, col))
+		threatList.append(self.horThreat(board, row, col))
+		threatList.append(self.diagThreat(board, row, col))
+		for threat in threatList:
+			if threat[0] == 30:
+				numThreats += 1
+				if len(checklist) == 0:
+					checklist.append(1)
+					for i in range(len(threat)):
+						if i > 0:
+							l.append(threat[i])
+		if len(checklist) == 0:
+			checklist.append(0)
+		checklist.append(board[row][col])
+		checklist.append(max(threatList[0][0], threatList[1][0], threatList[2][0]))
+		checklist.append(numThreats)
+		for i in l:
+			checklist.append(i)
+		return checklist
+			
 
 	def sameThreat(threats):
-		pass
+		for x in range(len(threats)):
+			for y in range(len(threats)):
+				if x != y:
+					if (threats[x][0] != threats[y][0]) & (threats[x][1] != threats[y][1]):
+						return True
+		return False
 
 	def threats(self,board, position):
 		l = []
@@ -214,20 +428,20 @@ class minimaxAI(connect4Player):
 			for row in range(board):
 				if board[row][col] != 0:
 					checklist = self.checklist(board, row, col)
-					if checklist[0] == True:
-						if checklist[1] == 1:
-							for i in range(checklist[4]):
+					if checklist[0] == 1: # whether theres threats or not
+						if checklist[1] == 1: # player
+							for i in range(checklist[3]):# number of threats
+								l.append(checklist[4 + (2 * i)])
 								l.append(checklist[5 + (2 * i)])
-								l.append(checklist[6 + (2 * i)])
 								p1Threats.append(l)
 								l.clear()
 						else:
-							for i in range(checklist[4]):
+							for i in range(checklist[3]): # number of threats
+								l.append(checklist[4 + (2 * i)])
 								l.append(checklist[5 + (2 * i)])
-								l.append(checklist[6 + (2 * i)])
 								p2Threats.append(l)
 								l.clear()
-					if abs(checklist[2]) > maxThreat:
+					if abs(checklist[2]) > maxThreat: # eval
 						maxThreat = checklist[2]
 		if len(p1Threats) > 1:
 			if not self.sameThreat(p1Threats):
@@ -239,10 +453,10 @@ class minimaxAI(connect4Player):
 
 	def evaluateBoard(self,board, move, position):
 		gameOver = self.isGameOver(board, move, position)
-		threats = self.threats(board, position)
 		if gameOver != 0:
 			return gameOver
 		else:
+			threats = self.threats(board, position)
 			return threats
 	
 	def maxValue(self, board, depth, curDepth):
