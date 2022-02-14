@@ -412,6 +412,7 @@ class minimaxAI(connect4Player):
 			if not self.sameThreat(p2Threats):
 				if abs(maxThreat) < 95:
 					maxThreat = -95
+		return maxThreat
 
 	def evaluateBoard(self,board, move, position):
 		gameOver = self.isGameOver(board, move, position)
@@ -501,6 +502,7 @@ class minimaxAI(connect4Player):
 		"""
 		depth = 3
 		board = env.getBoard()
+		print(len(board[0]))
 		if(self.isFirstMove(board)):
 			move[:] = [3]
 		else:
