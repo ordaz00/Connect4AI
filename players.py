@@ -199,183 +199,145 @@ class minimaxAI(connect4Player):
 		else:
 			return 0
 
-	def vertThreat(self, board, row, col):
-		lastRow = 0
+	def edgeCase(self, board, row, col, rowIter, colIter):
+		newRow = row
+		newCol = col
 		count = 0
-		threat = 0
 		threatList = []
 		threatPos = []
 		position = board[row][col]
-		if row == 0:
-			for i in range(len(board)):
-				if board[i][col] == position:
-					count += 1
-				else:
-					break
-			if count == 1:
-				threat = 5
-			elif count == 2:
-				threat = 10
+		while ((newRow >= 0 & newRow < len(board)) | (newCol >= 0 & newCol < len(board[0]))):
+			if(board[newRow][newCol] == position):
+				count += 1
 			else:
-				if board[3][col] == 0:
-					threat = 30
-					threatPos.append(3)
-					threatPos.append(col)
-				else:
-					threat = 0
-			if position != self.position:
-				threat = threat * -1
-		else:
-			for i in range(len(board)):
-				if i > row:
-					if board[i][col] == position:
-						count += 1
-					else:
-						lastRow = i
-						break
-			for i in range(row + 1):
-				if board[row - i][col] == position:
-					count += 1
-				else:
-					break
-			if count == 1:
-				threat = 5
-			elif count == 2:
-				threat = 10
-			else:
-				if board[lastRow][col] == 0:
-					threat = 30
-					threatPos.append(lastRow)
-					threatPos.append(col)
-				else:
-					threat = 0
-			if position != self.position:
-				threat = threat * -1
-		threatList.append(threat)
+				if board[newRow][newCol] == 0:
+					threatPos.append(newRow)
+					threatPos.append(newCol)
+				break
+			newRow += rowIter
+			newCol += colIter
+		threatList.append(count)
 		if len(threatPos) > 0:
 			for i in threatPos:
 				threatList.append(i)
+		return threatList
+
+	def middleCase(self, board, row, col, rowIter1, colIter1, rowIter2, colIter2):
+		threatList = []
+		left = self.edgeCase(board, row, col, rowIter1, colIter1)
+		right = self.edgeCase(board, row, col, rowIter2, colIter2)
+		threatList.append(left[0] + right[0] - 1)
+		if (len(left) > 1):
+			for i in range(len(left)):
+				if i > 0:
+					threatList.append(left[i])
+		if (len(right) > 1):
+			for i in range(len(right)):
+				if i > 0:
+					threatList.append(right[i])
+		return threatList
+
+	def evalByCountAndType(self, count, numThreats, type):
+		if numThreats == 0:
+				eval = 0
+		else:
+			if type == 1:
+				if count == 1:
+					eval = 5
+				elif count == 2:
+					eval = 10
+				else:
+					count = 20
+			if type == 2:
+				if count == 1:
+					eval = 5
+				elif count == 2:
+					eval = 15
+				else:
+					count = 30
+			if type == 3:
+				if count == 1:
+					eval = 5
+				elif count == 2:
+					eval = 15
+				else:
+					count = 30
+		return eval
+
+	def vertThreat(self, board, row, col):
+		if row == 0:
+			threatList = self.edgeCase(board, row, col, 1, 0)
+			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 1)
+		else:
+			threatList = self.middleCase(board, row, col, -1, 0, 1, 0)
+			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 1)
 		return threatList
 			
 
 	def horThreat(self, board, row, col):
-		firstCol = 0
-		lastCol = 0
-		count = 0
-		threat = 0
-		threatList = []
-		threatPos = []
-		position = board[row][col]
 		if col == 0:
-			for i in range(len(board[0])):
-				if board[row][i] == position:
-					count += 1
-				else:
-					break
-			if count == 1:
-				threat = 5
-			elif count == 2:
-				threat = 10
-			else:
-				if board[row][3] == 0:
-					if position == 1 & ((row + 1) % 2 == 1):
-						threat = 30
-						threatPos.append(row)
-						threatPos.append(3)
-					elif(position == 2 & ((row + 1) % 2 == 0)):
-						threat = 30
-						threatPos.append(row)
-						threatPos.append(3)
-					else:
-						threat = 20
-				else:
-					threat = 0
-			if position != self.position:
-				threat = threat * -1
+			threatList = self.edgeCase(board, row, col, 0, 1)
+			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 2)
 		else:
-			for i in range(len(board[0])):
-				if i > col:
-					if board[row][i] == position:
-						count += 1
-					else:
-						lastCol = i
-						break
-			for i in range(col + 1):
-				if board[row][col - i] == position:
-					count += 1
-				else:
-					firstCol = i
-					break
-			if count == 1:
-				threat = 5
-			elif count == 2:
-				threat = 10
-			else:
-				if (board[row][firstCol] == 0) & (board[row][lastCol] == 0):
-					if position == 1 & ((row + 1) % 2 == 1):
-						threat = 95
-						threatPos.append(row)
-						threatPos.append(firstCol)
-						threatPos.append(row)
-						threatPos.append(lastCol)
-					elif(position == 2 & ((row + 1) % 2 == 0)):
-						threat = 95
-						threatPos.append(row)
-						threatPos.append(firstCol)
-						threatPos.append(row)
-						threatPos.append(lastCol)
-					else:
-						threat = 50
-						threatPos.append(row)
-						threatPos.append(firstCol)
-						threatPos.append(row)
-						threatPos.append(lastCol)
-				elif board[row][firstCol] == 0:
-					if position == 1 & ((row + 1) % 2 == 1):
-						threat = 30
-						threatPos.append(row)
-						threatPos.append(firstCol)
-					elif(position == 2 & ((row + 1) % 2 == 0)):
-						threat = 30
-						threatPos.append(row)
-						threatPos.append(firstCol)
-					else:
-						threat = 20
-				elif board[row][lastCol] == 0:
-					if position == 1 & ((row + 1) % 2 == 1):
-						threat = 30
-						threatPos.append(row)
-						threatPos.append(lastCol)
-					elif(position == 2 & ((row + 1) % 2 == 0)):
-						threat = 30
-						threatPos.append(row)
-						threatPos.append(lastCol)
-					else:
-						threat = 20
-				else:
-					threat = 0
-			if position != self.position:
-				threat = threat * -1
-		threatList.append(threat)
-		if len(threatPos) > 0:
-			for i in threatPos:
-				threatList.append(i)
+			threatList = self.middleCase(board, row, col, 0, -1, 0, 1)
+			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 2)
 		return threatList
 
 	def leftDiagThreat(self, board, row, col):
-		count = 0
-		threat = 0
 		threatList = []
-		threatPos = []
-		position = board[row][col]
+		if(col == 0):
+			if(row >= 3):
+				threatList = self.edgeCase(board,row,col, -1, 1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		elif((col == len(board[0]))):
+			if (row <=  (len(board) - 4)):
+				threatList = self.edgeCase(board,row,col, 1, -1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)	
+		elif(row == len(board) - 1):
+			if col <= 3:
+				threatList = self.edgeCase(board,row,col, -1, 1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		else:
+			if (row + col >= 3) & (row + col < 9):
+				threatList = self.middleCase(board,row,col, 1, -1, -1, 1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		return threatList
 		
-
 	def rightDiagThreat(self, board, row, col):
-		count = 0
-		threat = 0
 		threatList = []
-		threatPos = []
-		position = board[row][col]
+		if(col == 0):
+			if(row < len(board) - 3):
+				threatList = self.edgeCase(board,row,col, 1, 1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		elif((col == len(board[0]))):
+			if (row >=  3):
+				threatList = self.edgeCase(board,row,col, -1, -1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		elif(row == len(board)):
+			if col > 3:
+				threatList = self.edgeCase(board,row,col, 1, 1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		else:
+			if (row + col >= 3) & (row + col < 9):
+				threatList = self.middleCase(board,row,col, -1, -1)
+				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			else:
+				threatList.append(0)
+		return threatList
 
 	def diagThreat(self, board, row, col):
 		left = self.leftDiagThreat(board, row, col)
@@ -399,7 +361,7 @@ class minimaxAI(connect4Player):
 				if len(checklist) == 0:
 					checklist.append(1)
 					for i in range(len(threat)):
-						if i > 0:
+						if i > 1:
 							l.append(threat[i])
 		if len(checklist) == 0:
 			checklist.append(0)
