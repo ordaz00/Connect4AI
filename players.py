@@ -89,6 +89,7 @@ class minimaxAI(connect4Player):
 		Returns:
 			[bool]: [a bool that denotes whether its the first move and minimax is the first player]
 		"""
+		print(len(board[0]))
 		if self.position != 1:
 			return False
 		for r in range(len(board)):
@@ -106,8 +107,10 @@ class minimaxAI(connect4Player):
 		Returns:
 			[list]: [a list of open columns, which make up the possible moves]
 		"""
+		print(board[0])
+		i = len(board[0])
 		listOfMoves = []
-		for col in range(len(board[0])):
+		for col in range(i):
 			if board[len(board) - 1][col] == 0:
 				listOfMoves.append(col)
 		return listOfMoves
@@ -199,44 +202,6 @@ class minimaxAI(connect4Player):
 		else:
 			return 0
 
-	def edgeCase(self, board, row, col, rowIter, colIter):
-		newRow = row
-		newCol = col
-		count = 0
-		threatList = []
-		threatPos = []
-		position = board[row][col]
-		while ((newRow >= 0 & newRow < len(board)) | (newCol >= 0 & newCol < len(board[0]))):
-			if(board[newRow][newCol] == position):
-				count += 1
-			else:
-				if board[newRow][newCol] == 0:
-					threatPos.append(newRow)
-					threatPos.append(newCol)
-				break
-			newRow += rowIter
-			newCol += colIter
-		threatList.append(count)
-		if len(threatPos) > 0:
-			for i in threatPos:
-				threatList.append(i)
-		return threatList
-
-	def middleCase(self, board, row, col, rowIter1, colIter1, rowIter2, colIter2):
-		threatList = []
-		left = self.edgeCase(board, row, col, rowIter1, colIter1)
-		right = self.edgeCase(board, row, col, rowIter2, colIter2)
-		threatList.append(left[0] + right[0] - 1)
-		if (len(left) > 1):
-			for i in range(len(left)):
-				if i > 0:
-					threatList.append(left[i])
-		if (len(right) > 1):
-			for i in range(len(right)):
-				if i > 0:
-					threatList.append(right[i])
-		return threatList
-
 	def evalByCountAndType(self, count, numThreats, type):
 		if numThreats == 0:
 				eval = 0
@@ -264,16 +229,52 @@ class minimaxAI(connect4Player):
 					count = 30
 		return eval
 
+	def edgeCase(self, board, row, col, rowIter, colIter, type):
+		newRow = row
+		newCol = col
+		count = 0
+		blockCount = 0
+		spaceCount = 0
+		position = board[row][col]
+		while ((newRow >= 0 & newRow < len(board)) | (newCol >= 0 & newCol < len(board[0]))):
+			if (board[newRow][newCol] == position):
+				if(blockCount == 0):
+					if (spaceCount < 3):
+						if (count < 3):
+							count += 1
+						else:
+							break
+					else:
+						break
+				else:
+					break
+			elif (board[newRow][newCol] != position) & (board[newRow][newCol] != 0):
+				if (abs(newRow - row + blockCount) == 1) | (abs(newCol - col + blockCount) == 1):
+					blockCount += 1
+				else:
+					break
+			else:
+				if(blockCount == 0):
+					spaceCount += 1
+				else:
+					break
+			newRow += rowIter
+			newCol += colIter
+		if count > blockCount:
+			threat = self.evalByCountAndType(count, spaceCount, type)
+		else:
+			threat = self.evalByCountAndType(blockCount, 0, 4)
+		return threat
+
+	def middleCase(self, board, row, col, rowIter1, colIter1, rowIter2, colIter2):
+		pass
+
 	def vertThreat(self, board, row, col):
 		if row == 0:
 			threatList = self.edgeCase(board, row, col, 1, 0)
 			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 1)
-		else:
-			threatList = self.middleCase(board, row, col, -1, 0, 1, 0)
-			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 1)
 		return threatList
 			
-
 	def horThreat(self, board, row, col):
 		if col == 0:
 			threatList = self.edgeCase(board, row, col, 0, 1)
@@ -356,7 +357,7 @@ class minimaxAI(connect4Player):
 		threatList.append(self.horThreat(board, row, col))
 		threatList.append(self.diagThreat(board, row, col))
 		for threat in threatList:
-			if threat[0] == 30:
+			if abs(threat[0]) == 30:
 				numThreats += 1
 				if len(checklist) == 0:
 					checklist.append(1)
@@ -366,7 +367,7 @@ class minimaxAI(connect4Player):
 		if len(checklist) == 0:
 			checklist.append(0)
 		checklist.append(board[row][col])
-		checklist.append(max(threatList[0][0], threatList[1][0], threatList[2][0]))
+		checklist.append(max(abs(threatList[0][0]), abs(threatList[1][0]), abs(threatList[2][0])))
 		checklist.append(numThreats)
 		for i in l:
 			checklist.append(i)
@@ -417,6 +418,7 @@ class minimaxAI(connect4Player):
 	def evaluateBoard(self,board, move, position):
 		gameOver = self.isGameOver(board, move, position)
 		if gameOver != 0:
+			print("found game over")
 			return gameOver
 		else:
 			threats = self.threats(board, position)
@@ -433,6 +435,8 @@ class minimaxAI(connect4Player):
 		Returns:
 			[int]: [the value of max's best move]
 		"""
+		print(len(board[0]))
+		print(type(board))
 		position = self.position
 		moves = self.possibleMoves(board)
 		leaves = []
@@ -447,11 +451,11 @@ class minimaxAI(connect4Player):
 				move = self.applyMove(board,posMove, position)
 				eval = self.evaluateBoard(move, posMove, position)
 				leaves.append(eval)
-			return max(leaves)
+			return max(abs(leaves))
 		else:
 			for posMove in moves:
 				leaves.append(self.minValue(posMove,depth, curDepth + 1))
-			return max(leaves)
+			return max(abs(leaves))
 
 	def minValue(self, board, depth, curDepth):
 		"""The min part of the minimax algorithm, finds the move min would make
@@ -491,6 +495,7 @@ class minimaxAI(connect4Player):
 		Returns:
 			[int]: [the column of best possible move that can be made at the depth that's being searched too]
 		"""
+		print(len(board[0]))
 		return self.maxValue(board, depth, 0)
 
 	def play(self, env, move):
