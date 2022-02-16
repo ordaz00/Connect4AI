@@ -129,24 +129,10 @@ class minimaxAI(connect4Player):
 				board[len(board) - row - 1][col] = position
 				return board
 
-	def rowOfMove(self, board, move, position):
-		topPosition = len(board)
-		# print(topPosition)
-		# print("move = ", move)
-		# print("position = ", position)
-		for i in range(topPosition):
-			# print("i = ", i)
-			# print("board[i][move] = ", board[i][move])
-			# print(board)
-			if board[i][move] == position:
-				rowOfMove = i
-				return rowOfMove
-
-	def horWin(self, board, move, position):
+	def horWin(self, board, row, col, position):
 		inARow = 0
-		rowOfMove = self.rowOfMove(board, move, position)
 		for col in range(len(board[0])):
-			if board[rowOfMove][col] == position:
+			if board[row][col] == position:
 				inARow += 1
 				if inARow == 4:
 					return True
@@ -154,10 +140,11 @@ class minimaxAI(connect4Player):
 				inARow = 0
 		return False
 
-	def vertWin(self, board, move, position):
+	def vertWin(self, board, row, col, position):
 		inARow = 0
-		for row in range(len(board)):
-			if board[row][move] == position:
+		boardHeight = len(board)
+		for row in range(boardHeight):
+			if board[boardHeight - row - 1][col] == position:
 				inARow += 1
 				if inARow == 4:
 					return True
@@ -165,12 +152,11 @@ class minimaxAI(connect4Player):
 				inARow = 0
 		return False
 
-	def leftDiagWin(self, board, move, position):
+	def leftDiagWin(self, board, row, col, position):
 		inARow = 0
-		rowOfMove = self.rowOfMove(board, move, position)
-		diff = min(rowOfMove, move)
-		x = move - diff
-		y = rowOfMove - diff
+		diff = min(row, col)
+		x = col - diff
+		y = row - diff
 		for i in range(len(board) - y):
 			if board[y + i][x + i] == position:
 				inARow += 1
@@ -180,14 +166,13 @@ class minimaxAI(connect4Player):
 				inARow = 0
 		return False
 	
-	def rightDiagWin(self, board, move, position):
+	def rightDiagWin(self, board, row, col,  position):
 		inARow = 0
-		rowOfMove = self.rowOfMove(board, move, position)
-		diff = min(rowOfMove, move)
-		x = move + diff
-		y = rowOfMove - diff
-		for i in range(len(board) - y):
-			if board[y + i][x - i] == position:
+		diff = min((len(board) - row - 1), col)
+		x = col - diff
+		y = row + diff
+		for i in range(y + 1):
+			if board[y - i][x + i] == position:
 				inARow += 1
 				if inARow == 4:
 					return True
@@ -195,11 +180,11 @@ class minimaxAI(connect4Player):
 				inARow = 0
 		return False
 
-	def diagWin(self,board, move, position):
-		return (self.leftDiagWin(board, move, position) | self.rightDiagWin(board, move, position))
+	def diagWin(self,board, row, col,  position):
+		return (self.leftDiagWin(board, row, col, position) | self.rightDiagWin(board, row, col, position))
 
-	def isGameOver(self,board, move, position):
-		if self.horWin(board,move,position) | self.vertWin(board,move,position) | self.diagWin(board,move,position):
+	def isGameOver(self,board, row, col, position):
+		if self.horWin(board, row, col, position) | self.vertWin(board, row, col, position) | self.diagWin(board, row, col, position):
 			if position == self.position:
 				return 100
 			else:
@@ -207,177 +192,260 @@ class minimaxAI(connect4Player):
 		else:
 			return 0
 
-	def evalByCountAndType(self, count, numThreats, type):
+	def edgeCaseEval(self, count, numThreats, window, evalType):
+		windowLength = len(window)
+		eval = 0
 		if numThreats == 0:
+			if evalType != 4:
 				eval = 0
+			else:
+				eval = 75
 		else:
-			if type == 1:
+			if evalType == 1:
 				if count == 1:
-					eval = 5
+					if numThreats < 3:
+						eval = 0
+					else:
+						eval = 35
 				elif count == 2:
-					eval = 10
+					if numThreats < 2:
+						eval = 0
+					else:
+						eval = 35
 				else:
-					count = 20
-			if type == 2:
+					eval = 70
+			elif evalType == 2:
 				if count == 1:
-					eval = 5
+					if numThreats < 3:
+						eval = 0
+					else:
+						eval = 35
 				elif count == 2:
+					if(windowLength == 4):
+						eval = 0
+					else:
+						eval = 55
+				else:
+					if windowLength <= 5:
+						eval = 70
+					else:
+						if window[4] == 0:
+							eval = 70
+						else:
+							eval = 55
+			elif evalType == 3:
+				if count == 1:
+					if numThreats == 3:
+						eval = 35
+					else:
+						eval = 0
+				elif count == 2:
+					if windowLength == 4:
+						eval = 0
+					else:
+						eval = 50
+				else:
+					if windowLength <= 5:
+						eval = 65
+					else:
+						if window[4] == 0:
+							eval = 65
+						else:
+							eval = 40
+			else:
+				if count == 1:
 					eval = 15
+				if count == 2:
+					eval = 80
 				else:
-					count = 30
-			if type == 3:
-				if count == 1:
-					eval = 5
-				elif count == 2:
-					eval = 15
-				else:
-					count = 30
+					eval = 60
 		return eval
 
-	def edgeCase(self, board, row, col, rowIter, colIter, type):
+	def edgeCase(self, board, row, col, rowIter, colIter, evalType):
 		newRow = row
 		newCol = col
 		count = 0
 		blockCount = 0
 		spaceCount = 0
+		window = []
+		threatHeight = []
 		position = board[row][col]
-		while ((newRow >= 0 & newRow < len(board)) | (newCol >= 0 & newCol < len(board[0]))):
+
+		while ((newRow >= 0 & newRow < len(board)) & (newCol >= 0 & newCol < len(board[0]))):
 			if (board[newRow][newCol] == position):
 				if(blockCount == 0):
-					if (spaceCount < 3):
-						if (count < 3):
-							count += 1
-						else:
-							break
+					if count < 3:
+						window.append(board[newRow][newCol])
+						count += 1
 					else:
+						window.append(board[newRow][newCol])
 						break
 				else:
 					break
 			elif (board[newRow][newCol] != position) & (board[newRow][newCol] != 0):
-				if (abs(newRow - row + blockCount) == 1) | (abs(newCol - col + blockCount) == 1):
-					blockCount += 1
-				else:
+				if count > 1:
+					window.append(board[newRow][newCol])
 					break
+				else:
+					window.append(board[newRow][newCol])
+					blockCount += 1
 			else:
 				if(blockCount == 0):
-					spaceCount += 1
+					if count == 3:
+						window.append(board[newRow][newCol])
+						threatHeight.append(newRow)
+						spaceCount += 1
+						break
+					elif spaceCount == 2:
+						window.append(board[newRow][newCol])
+						threatHeight.append(newRow)
+						spaceCount += 1
+						break
+					else:
+						window.append(board[newRow][newCol])
+						threatHeight.append(newRow)
+						spaceCount += 1
 				else:
+					window.append(board[newRow][newCol])
+					spaceCount += 1
 					break
 			newRow += rowIter
 			newCol += colIter
-		if count > blockCount:
-			threat = self.evalByCountAndType(count, spaceCount, type)
+
+		if window[1] == position | window[1] == 0:
+			threat = self.edgeCaseEval(count, spaceCount, window, evalType)
 		else:
-			threat = self.evalByCountAndType(blockCount, 0, 4)
+			threat = self.edgeCaseEval(blockCount, spaceCount, window, 4)
+		if count == 3:
+			if len(window) <= 5 & spaceCount <= 2:
+				if position == 1:
+					if (threatHeight[0] + 1) % 2 == 0:
+						threat = threat - threat/3
+				else:
+					if (threatHeight[0] + 1) % 2 == 1:
+						threat = threat - threat/3
+		elif count == 1:
+			if spaceCount == 3:
+				if position == 1:
+					if (threatHeight[2] + 1) % 2 == 0:
+						threat = threat - threat/3
+				else:
+					if (threatHeight[2] + 1) % 2 == 1:
+						threat = threat - threat/3
 		return threat
 
-	def middleCase(self, board, row, col, rowIter1, colIter1, rowIter2, colIter2):
-		newRow = row
-		newCol = col
-		count = 0
-		blockCount = 0
+	def middleCase(self, board, row, col, rowIter1, colIter1, rowIter2, colIter2, evalType):
+		leftRow = row + rowIter1
+		leftCol = col + colIter1
+		rightRow = row + rowIter2
+		rightCol = col + colIter2
 		spaceCount = 0
 		position = board[row][col]
-		while ((newRow >= 0 & newRow < len(board)) | (newCol >= 0 & newCol < len(board[0]))):
-			if (board[newRow][newCol] == position):
-				if(blockCount == 0):
-					if (spaceCount < 3):
-						if (count < 3):
-							count += 1
-						else:
-							break
-					else:
-						break
-				else:
-					break
-			elif (board[newRow][newCol] != position) & (board[newRow][newCol] != 0):
-				if (abs(newRow - row + blockCount) == 1) | (abs(newCol - col + blockCount) == 1):
-					blockCount += 1
-				else:
-					break
-			else:
-				if(blockCount == 0):
+		x = len(board[0])
+		y = len(board)
+		if (board[leftRow][leftCol] == position) & (board[rightRow][rightCol] == position):
+			leftRow += rowIter1
+			leftCol += colIter1
+			rightRow += rowIter2
+			rightCol += colIter2
+			if(leftRow >= 0 & leftRow < y) & (leftCol >= 0 & leftCol < x):
+				if(board[row + (rowIter1 * 2)][col + (colIter1 * 2)] == position):
 					spaceCount += 1
-				else:
-					break
-			newRow += rowIter
-			newCol += colIter
-		if count > blockCount:
-			threat = self.evalByCountAndType(count, spaceCount, type)
+			if (rightRow >= 0 & rightRow < y) & (rightCol >= 0 & rightCol < x):
+				if(board[row + (rowIter2 * 2)][col + (colIter2 * 2)] == position):
+					spaceCount += 1
+			return 95
 		else:
-			threat = self.evalByCountAndType(blockCount, 0, 4)
-		return threat
+			leftRow = row
+			leftCol = col
+			rightRow = row
+			rightCol = col
+			while(leftRow >= 0 & leftRow < y) & (leftCol >= 0 & leftCol < x):
+				if (board[leftRow][leftCol] != position):
+					break
+				leftRow += rowIter1
+				leftCol += colIter1
+			while(rightRow >= 0 & rightRow < y) & (rightCol >= 0 & rightCol < x):
+				if(board[rightRow][rightCol] != position):
+					break
+				rightRow += rowIter2
+				rightCol += colIter2
+			
+			left =  self.edgeCase(board, (leftRow - rowIter1), (leftCol - colIter1), rowIter1, colIter1, evalType)
+			right = self.edgeCase(board, (rightRow - rowIter2), (rightCol - colIter2), rowIter2, colIter2, evalType)
+			return max(left, right)
 
 	def vertThreat(self, board, row, col):
 		if row == 0:
-			threatList = self.edgeCase(board, row, col, 1, 0)
-			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 1)
-		return threatList
+			threat = self.edgeCase(board, row, col, -1, 0, 1)
+		else:
+			threat = self.middleCase(board, row, col, -1, 0, 1, 0, 1)
+		return threat
 			
 	def horThreat(self, board, row, col):
 		if col == 0:
-			threatList = self.edgeCase(board, row, col, 0, 1)
-			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 2)
+			threat = self.edgeCase(board, row, col, 0, 1, 2)
+		elif col == (len(board[0]) - 1):
+			threat = self.edgeCase(board, row, col, 0, -1, 2)
 		else:
-			threatList = self.middleCase(board, row, col, 0, -1, 0, 1)
-			threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 2)
-		return threatList
+			threat = self.middleCase(board, row, col, 0, -1, 0, 1, 2)
+		return threat
 
 	def leftDiagThreat(self, board, row, col):
-		threatList = []
 		if(col == 0):
-			if(row >= 3):
-				threatList = self.edgeCase(board,row,col, -1, 1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			if(row < 3):
+				threat = self.edgeCase(board, row, col, 1, 1, 3)
 			else:
-				threatList.append(0)
-		elif((col == len(board[0]))):
-			if (row <=  (len(board) - 4)):
-				threatList = self.edgeCase(board,row,col, 1, -1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+				return 0
+		elif((col == len(board[0]) - 1)):
+			if (row >=  3):
+				threat = self.edgeCase(board,row,col, -1, -1, 3)
 			else:
-				threatList.append(0)	
+				return 0	
+		elif(row == 0):
+			if(col < 4):
+				threat = self.edgeCase(board,row,col, 1, 1, 3)
+			else:
+				return 0
 		elif(row == len(board) - 1):
-			if col <= 3:
-				threatList = self.edgeCase(board,row,col, -1, 1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			if col >= 3:
+				threat = self.edgeCase(board,row,col, -1, -1, 3)
 			else:
-				threatList.append(0)
+				return 0
 		else:
-			if (row + col >= 3) & (row + col < 9):
-				threatList = self.middleCase(board,row,col, 1, -1, -1, 1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			if (row == len(board) - 2 & col == 1) | (row == 1 & col == len(board[0]) - 2):
+				threat = self.middleCase(board,row,col, -1, -1, 1, 1, 3)
 			else:
-				threatList.append(0)
-		return threatList
+				return 0
+		return threat
 		
 	def rightDiagThreat(self, board, row, col):
-		threatList = []
 		if(col == 0):
-			if(row < len(board) - 3):
-				threatList = self.edgeCase(board,row,col, 1, 1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			if(row > 2):
+				threat = self.edgeCase(board, row, col, -1, 1, 3)
 			else:
-				threatList.append(0)
-		elif((col == len(board[0]))):
-			if (row >=  3):
-				threatList = self.edgeCase(board,row,col, -1, -1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+				return 0
+		elif((col == len(board[0]) - 1)):
+			if (row <  3):
+				threat = self.edgeCase(board, row, col, 1, -1, 3)
 			else:
-				threatList.append(0)
+				return 0
+		elif(row == 0):
+			if(col >= 3):
+				threat = self.edgeCase(board, row, col, 1, -1, 3)
+			else:
+				return 0
 		elif(row == len(board)):
-			if col > 3:
-				threatList = self.edgeCase(board,row,col, 1, 1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			if col < 4:
+				threat = self.edgeCase(board, row, col, -1, 1, 3)
 			else:
-				threatList.append(0)
+				return 0
 		else:
-			if (row + col >= 3) & (row + col < 9):
-				threatList = self.middleCase(board,row,col, -1, -1)
-				threatList[0] = self.evalByCountAndType(threatList[0], len(threatList) - 1, 3)
+			if (row == 1 & col == 1) | (row == len(board) - 2 & col == len(board[0]) - 2):
+				threat = self.middleCase(board,row,col, 1, -1, -1, 1, 3)
 			else:
-				threatList.append(0)
-		return threatList
+				return 0
+		return threat
 
 	def diagThreat(self, board, row, col):
 		left = self.leftDiagThreat(board, row, col)
@@ -387,80 +455,23 @@ class minimaxAI(connect4Player):
 		else:
 			return right
 
-	def checklist(self, board, row, col):
-		numThreats = 0
-		checklist = []
-		threatList = []
-		l = []
-		threatList.append(self.vertThreat(board, row, col))
-		threatList.append(self.horThreat(board, row, col))
-		threatList.append(self.diagThreat(board, row, col))
-		for threat in threatList:
-			if abs(threat[0]) == 30:
-				numThreats += 1
-				if len(checklist) == 0:
-					checklist.append(1)
-					for i in range(len(threat)):
-						if i > 1:
-							l.append(threat[i])
-		if len(checklist) == 0:
-			checklist.append(0)
-		checklist.append(board[row][col])
-		checklist.append(max(abs(threatList[0][0]), abs(threatList[1][0]), abs(threatList[2][0])))
-		checklist.append(numThreats)
-		for i in l:
-			checklist.append(i)
-		return checklist
-			
+	def threats(self, board, row, col):
+		threats = []
+		threats.append(self.vertThreat(board, row, col))
+		threats.append(self.horThreat(board, row, col))
+		threats.append(self.diagThreat(board, row, col))
+		return max(threats)
 
-	def sameThreat(threats):
-		for x in range(len(threats)):
-			for y in range(len(threats)):
-				if x != y:
-					if (threats[x][0] != threats[y][0]) & (threats[x][1] != threats[y][1]):
-						return True
-		return False
-
-	def threats(self,board, position):
-		l = []
-		p1Threats = []
-		p2Threats = []
-		maxThreat = 0
-		for col in range(len(board[0])):
-			for row in range(len(board)):
-				if board[row][col] != 0:
-					checklist = self.checklist(board, row, col)
-					if checklist[0] == 1: # whether theres threats or not
-						if checklist[1] == 1: # player
-							for i in range(checklist[3]):# number of threats
-								l.append(checklist[4 + (2 * i)])
-								l.append(checklist[5 + (2 * i)])
-								p1Threats.append(l)
-								l.clear()
-						else:
-							for i in range(checklist[3]): # number of threats
-								l.append(checklist[4 + (2 * i)])
-								l.append(checklist[5 + (2 * i)])
-								p2Threats.append(l)
-								l.clear()
-					if abs(checklist[2]) > maxThreat: # eval
-						maxThreat = checklist[2]
-		if len(p1Threats) > 1:
-			if not self.sameThreat(p1Threats):
-				maxThreat = 95
-		if len(p2Threats) > 2:
-			if not self.sameThreat(p2Threats):
-				if abs(maxThreat) < 95:
-					maxThreat = -95
-		return maxThreat
-
-	def evaluateBoard(self,board, move, position):
-		gameOver = self.isGameOver(board, move, position)
-		if gameOver != 0:
-			return gameOver
-		else:
-			threats = self.threats(board, position)
-			return threats
+	def evaluateBoard(self, board):
+		for row in range(len(board)):
+			for col in range(len(board[0])):
+				position = board[row][col]
+				gameOver = self.isGameOver(board, row, col, position)
+				if gameOver != 0:
+					return gameOver
+				else:
+					threats = self.threats(board, row, col)
+					return threats
 	
 	def maxValue(self, board, depth, curDepth):
 		"""The max part of the minimax algorithm, finds the move max would make
@@ -486,7 +497,7 @@ class minimaxAI(connect4Player):
 		elif curDepth == depth:
 			for posMove in moves:
 				move = self.applyMove(board,posMove, position)
-				eval = self.evaluateBoard(move, posMove, position)
+				eval = self.evaluateBoard(move)
 				leaves.append(eval)
 			return max(abs(leaves))
 		else:
@@ -512,7 +523,7 @@ class minimaxAI(connect4Player):
 		if curDepth == depth:
 			for posMove in moves:
 				move = self.applyMove(board, posMove, position)
-				eval = self.evaluateBoard(move, posMove, position)
+				eval = self.evaluateBoard(move)
 				leaves.append(eval)
 			return min(leaves)
 		else:
