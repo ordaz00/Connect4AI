@@ -91,8 +91,8 @@ class minimaxAI(connect4Player):
 		"""
 		if self.position != 1:
 			return False
-		for r in range(len(board)):
-			for c in range(len(board[0])):
+		for r in range(6):
+			for c in range(7):
 				if board[r][c] != 0:
 					return False
 		return True
@@ -106,9 +106,9 @@ class minimaxAI(connect4Player):
 		Returns:
 			[list]: [a list of open columns, which make up the possible moves]
 		"""
-		i = len(board[0])
+		#print(type(board))
 		listOfMoves = []
-		for col in range(i):
+		for col in range(6):
 			if board[0][col] == 0:
 				listOfMoves.append(col)
 		return listOfMoves
@@ -125,353 +125,604 @@ class minimaxAI(connect4Player):
 			[numpy array]: [the new board state made after applying the move]
 		"""
 		for row in range(len(board)):
-			if board[len(board) - row - 1][col] == 0:
-				board[len(board) - row - 1][col] = position
+			if board[5 - row][col] == 0:
+				board[5 - row][col] = position
+				#print("I return a board here")
+				#print(board)
+				#print("end of returned board")
 				return board
 
-	def horWin(self, board, row, col, position):
-		inARow = 0
-		for col in range(len(board[0])):
-			if board[row][col] == position:
-				inARow += 1
-				if inARow == 4:
-					return True
-			else:
-				inARow = 0
-		return False
-
-	def vertWin(self, board, row, col, position):
-		inARow = 0
-		boardHeight = len(board)
-		for row in range(boardHeight):
-			if board[boardHeight - row - 1][col] == position:
-				inARow += 1
-				if inARow == 4:
-					return True
-			else:
-				inARow = 0
-		return False
-
-	def leftDiagWin(self, board, row, col, position):
-		inARow = 0
-		diff = min(row, col)
-		x = col - diff
-		y = row - diff
-		for i in range(len(board) - y):
-			if board[y + i][x + i] == position:
-				inARow += 1
-				if inARow == 4:
-					return True
-			else:
-				inARow = 0
-		return False
-	
-	def rightDiagWin(self, board, row, col,  position):
-		inARow = 0
-		diff = min((len(board) - row - 1), col)
-		x = col - diff
-		y = row + diff
-		for i in range(y + 1):
-			if board[y - i][x + i] == position:
-				inARow += 1
-				if inARow == 4:
-					return True
-			else:
-				inARow = 0
-		return False
-
-	def diagWin(self,board, row, col,  position):
-		return (self.leftDiagWin(board, row, col, position) | self.rightDiagWin(board, row, col, position))
-
-	def isGameOver(self,board, row, col, position):
-		if self.horWin(board, row, col, position) | self.vertWin(board, row, col, position) | self.diagWin(board, row, col, position):
-			if position == self.position:
-				return 100
-			else:
-				return -100
+	def getMultiplier(self, pos, row, count):
+		if pos == self.position:
+			# if pos == 1:
+			# 	if(row + (4 - count)) % 2 == 0:
+			# 		multiplier = 3/4
+			# 	else:
+			# 		multiplier = 1
+			# else:
+			# 	if(row + (4 - count)) % 2 == 1:
+			# 		multiplier = 3/4
+			# 	else:
+			# 		multiplier = 1
+			multiplier = 1
 		else:
-			return 0
+			# if pos == 1:
+			# 	if(row + (4 - count)) % 2 == 0:
+			# 		multiplier = -3/4
+			# 	else:
+			# 		multiplier = -1
+			# else:
+			# 	if(row + (4 - count)) % 2 == 1:
+			# 		multiplier = -3/4
+			# 	else:
+			# 		multiplier = -1
+			multiplier = -1
+		return multiplier
 
-	def edgeCaseEval(self, count, numThreats, window, evalType):
-		windowLength = len(window)
-		eval = 0
-		if numThreats == 0:
-			if evalType != 4:
-				eval = 0
-			else:
-				eval = 75
-		else:
-			if evalType == 1:
-				if count == 1:
-					if numThreats < 3:
-						eval = 0
-					else:
-						eval = 35
-				elif count == 2:
-					if numThreats < 2:
-						eval = 0
-					else:
-						eval = 35
-				else:
-					eval = 70
-			elif evalType == 2:
-				if count == 1:
-					if numThreats < 3:
-						eval = 0
-					else:
-						eval = 35
-				elif count == 2:
-					if(windowLength == 4):
-						eval = 0
-					else:
-						eval = 55
-				else:
-					if windowLength <= 5:
-						eval = 70
-					else:
-						if window[4] == 0:
-							eval = 70
-						else:
-							eval = 55
-			elif evalType == 3:
-				if count == 1:
-					if numThreats == 3:
-						eval = 35
-					else:
-						eval = 0
-				elif count == 2:
-					if windowLength == 4:
-						eval = 0
-					else:
-						eval = 50
-				else:
-					if windowLength <= 5:
-						eval = 65
-					else:
-						if window[4] == 0:
-							eval = 65
-						else:
-							eval = 40
-			else:
-				if count == 1:
-					eval = 15
-				if count == 2:
-					eval = 80
-				else:
-					eval = 60
-		return eval
-
-	def edgeCase(self, board, row, col, rowIter, colIter, evalType):
-		newRow = row
-		newCol = col
+	def vertWin(self, board):
+		threat = 0
 		count = 0
-		blockCount = 0
-		spaceCount = 0
-		window = []
-		threatHeight = []
-		position = board[row][col]
-
-		while ((newRow >= 0 & newRow < len(board)) & (newCol >= 0 & newCol < len(board[0]))):
-			if (board[newRow][newCol] == position):
-				if(blockCount == 0):
-					if count < 3:
-						window.append(board[newRow][newCol])
+		posOfMax = 0
+		maxCount = 0
+		lowestRow = 0
+		for col in range(7):
+			pos = board[5][col]
+			count = 0
+			if pos != 0:
+				for row in range(5,-1,-1):
+					if board[row][col] == pos:
 						count += 1
+						if count == 4:
+							#print("I exit here, vert")
+							if pos == self.position:
+								return 100
+							else:
+								return -100
+							
+					elif board[row][col] == 0:
+						if (count > maxCount) & ((row + 1 + count) >= 4):
+							posOfMax = pos
+							maxCount = count
+							lowestRow = row + 1
+						elif count == maxCount:
+							if row > lowestRow:
+								lowestRow = row + 1
+								posOfMax = pos
+						break
+
 					else:
-						window.append(board[newRow][newCol])
-						break
+						pos = board[row][col]
+						count = 1
+		multiplier = self.getMultiplier(posOfMax, lowestRow, maxCount)
+		if lowestRow > 0:
+			if maxCount == 3:
+				threat = 80 * multiplier
+			elif maxCount == 2:
+				if lowestRow > 1:
+					threat = 50 * multiplier
 				else:
-					break
-			elif (board[newRow][newCol] != position) & (board[newRow][newCol] != 0):
-				if count > 1:
-					window.append(board[newRow][newCol])
-					break
-				else:
-					window.append(board[newRow][newCol])
-					blockCount += 1
+					threat = 0
 			else:
-				if(blockCount == 0):
-					if count == 3:
-						window.append(board[newRow][newCol])
-						threatHeight.append(newRow)
-						spaceCount += 1
-						break
-					elif spaceCount == 2:
-						window.append(board[newRow][newCol])
-						threatHeight.append(newRow)
-						spaceCount += 1
-						break
+				if lowestRow > 2:
+					threat = 10 * multiplier
+				else:
+					threat = 0
+		else:
+			threat = 0
+		# print("maxCount ", maxCount, ", numOfSpaces ", lowestRow, ", multiplier ", multiplier, ", threat", threat)
+		# print(board)
+		#print("I exit here, vert")
+		return threat
+
+	def horWin(self, board):
+		pos = 0
+		threat = 0
+		count = 0
+		maxCount = 0
+		maxMidSpaces = 0
+		maxEndSpaces = 0
+		maxBeginningSpaces = 0
+		endSpace = 0
+		midSpace = 0
+		beginningSpace = 0
+		space = 0
+		maxRow = 0
+		posOfMax = 0
+		for row in range(5, -1, -1):
+			count = 0
+			endSpace = 0
+			midSpace = 0
+			beginningSpace = 0
+			space = 0
+			pos = 0
+			for col in range(7):
+				if board[row][col] != 0:
+					if pos == 0:
+						pos = board[row][col]
+					if board[row][col] == pos:
+						count += 1
+						if space > 0:
+							midSpace += space
+							space = 0
+						if (count == 4) & (midSpace == 0):
+							#print("I exit here, hor")
+							if pos == self.position:
+								return 100
+							else:
+								return -100
 					else:
-						window.append(board[newRow][newCol])
-						threatHeight.append(newRow)
-						spaceCount += 1
+						if space > 0:
+							endSpace += space
+						if (count > maxCount) & ((count + endSpace + midSpace + beginningSpace) >= 4):
+							maxCount = count
+							maxEndSpaces = endSpace
+							maxMidSpaces = midSpace
+							maxBeginningSpaces = beginningSpace
+							maxRow = row
+							posOfMax = pos
+						elif count == maxCount:
+							if ((endSpace + midSpace + beginningSpace) > (maxEndSpaces + maxMidSpaces + beginningSpace)):
+								maxEndSpaces = endSpace
+								maxMidSpaces = midSpace
+								maxBeginningSpaces = beginningSpace
+								maxRow = row
+								posOfMax = pos
+						pos = board[row][col]
+						count = 1
+						if space > 0:
+							beginningSpace += space
+							endSpace = 0
+							space = 0
+							midSpace = 0
+						else:
+							endSpace = 0
+							midSpace = 0
+							beginningSpace = 0
 				else:
-					window.append(board[newRow][newCol])
-					spaceCount += 1
-					break
-			newRow += rowIter
-			newCol += colIter
-
-		if window[1] == position | window[1] == 0:
-			threat = self.edgeCaseEval(count, spaceCount, window, evalType)
+					if count == 0:
+						beginningSpace += 1
+					else:
+						space += 1
+			if space > 0:
+				endSpace += space
+			if (count > maxCount) & ((count + endSpace + midSpace + beginningSpace) >= 4):
+				maxCount = count
+				maxEndSpaces = endSpace
+				maxMidSpaces = midSpace
+				maxBeginningSpaces = beginningSpace
+				maxRow = row
+				posOfMax = pos
+			elif count == maxCount:
+				if ((endSpace + midSpace + beginningSpace) > (maxEndSpaces + maxMidSpaces + beginningSpace)):
+					maxEndSpaces = endSpace
+					maxMidSpaces = midSpace
+					maxBeginningSpaces = beginningSpace
+					maxRow = row
+					posOfMax = pos
+			if(beginningSpace == 7):
+				break
+		multiplier = self.getMultiplier(posOfMax, maxRow, 0)
+		if((maxEndSpaces + maxMidSpaces + maxBeginningSpaces) > 0):
+			if maxCount > 3:
+				threat = 90 * multiplier + (-5 * maxMidSpaces)
+			elif maxCount == 3:
+				if (maxMidSpaces == 0):
+					if (maxEndSpaces >= 1) & (maxBeginningSpaces >= 1):
+						threat = 99 * multiplier
+					else:
+						threat = 85 * multiplier
+				elif maxMidSpaces == 1:
+					threat = 85 * multiplier
+				else:
+					threat = 75 * multiplier + (-5 * maxMidSpaces)
+			elif maxCount == 2:
+				if (maxMidSpaces == 0):
+					if (maxEndSpaces >= 1):
+						if(maxBeginningSpaces >= 1):
+							threat = 70 * multiplier
+						else:
+							if(maxEndSpaces >= 2):
+								threat = 70 * multiplier
+							else:
+								threat = 0
+					else:
+						if(maxBeginningSpaces > 2):
+							threat = 70 * multiplier
+						else:
+							threat = 0
+				else:
+					if (maxMidSpaces + maxBeginningSpaces + maxEndSpaces) >= 2:
+						threat = 70 * multiplier
+					else:
+						threat = 0
+			else:
+				if (maxMidSpaces + maxBeginningSpaces + maxEndSpaces) > 2:
+					threat = 10 * multiplier
+				else:
+					threat = 0
 		else:
-			threat = self.edgeCaseEval(blockCount, spaceCount, window, 4)
-		if count == 3:
-			if len(window) <= 5 & spaceCount <= 2:
-				if position == 1:
-					if (threatHeight[0] + 1) % 2 == 0:
-						threat = threat - threat/3
-				else:
-					if (threatHeight[0] + 1) % 2 == 1:
-						threat = threat - threat/3
-		elif count == 1:
-			if spaceCount == 3:
-				if position == 1:
-					if (threatHeight[2] + 1) % 2 == 0:
-						threat = threat - threat/3
-				else:
-					if (threatHeight[2] + 1) % 2 == 1:
-						threat = threat - threat/3
+			threat = 0
+		# print("I exit here, hor")
+		# print("maxCount ", maxCount, ", numOfSpaces ", (maxBeginningSpaces + maxEndSpaces + maxMidSpaces), ", multiplier ", multiplier, ", threat", threat)
+		# print(board)
 		return threat
 
-	def middleCase(self, board, row, col, rowIter1, colIter1, rowIter2, colIter2, evalType):
-		leftRow = row + rowIter1
-		leftCol = col + colIter1
-		rightRow = row + rowIter2
-		rightCol = col + colIter2
-		spaceCount = 0
-		position = board[row][col]
-		x = len(board[0])
-		y = len(board)
-		if (board[leftRow][leftCol] == position) & (board[rightRow][rightCol] == position):
-			leftRow += rowIter1
-			leftCol += colIter1
-			rightRow += rowIter2
-			rightCol += colIter2
-			if(leftRow >= 0 & leftRow < y) & (leftCol >= 0 & leftCol < x):
-				if(board[row + (rowIter1 * 2)][col + (colIter1 * 2)] == position):
-					spaceCount += 1
-			if (rightRow >= 0 & rightRow < y) & (rightCol >= 0 & rightCol < x):
-				if(board[row + (rowIter2 * 2)][col + (colIter2 * 2)] == position):
-					spaceCount += 1
-			return 95
-		else:
-			leftRow = row
-			leftCol = col
-			rightRow = row
-			rightCol = col
-			while(leftRow >= 0 & leftRow < y) & (leftCol >= 0 & leftCol < x):
-				if (board[leftRow][leftCol] != position):
-					break
-				leftRow += rowIter1
-				leftCol += colIter1
-			while(rightRow >= 0 & rightRow < y) & (rightCol >= 0 & rightCol < x):
-				if(board[rightRow][rightCol] != position):
-					break
-				rightRow += rowIter2
-				rightCol += colIter2
+	def leftDiagWin(self, board):
+		count = 0
+		x = 3
+		y = 5
+		threat = 0
+		maxCount = 0
+		maxMidSpaces = 0
+		maxEndSpaces = 0
+		maxBeginningSpaces = 0
+		endSpace = 0
+		midSpace = 0
+		beginningSpace = 0
+		space = 0
+		maxRow = 0
+		posOfMax = 0
+		pos = 0
+		while y >= 3:
+			count = 0
+			endSpace = 0
+			midSpace = 0
+			beginningSpace = 0
+			space = 0
+			pos = 0
+			if(x == 3):
+				for i in range(4):
+					if(board[y - i][x - i] != 0):
+						if pos == 0:
+							pos = board[y][x]
+						if(board[y - i][x - i] == pos):
+							count += 1
+							if count == 4:
+								#print("I exit here, left")
+								if pos == self.position:
+									return 100
+								else:
+									return -100
+						else:
+							break
+					elif board[y - i][x - i] == 0:
+						if count == 0:
+							beginningSpace += 1
+						else:
+							space += 1
+						maxRow = y - i				
+			elif (y == 3):
+				for i in range(4):
+					if(board[y][x] != 0):
+						pos = board[y][x]
+						if(board[y - i][x - i] == pos):
+							count += 1
+							if count == 4:
+								#print("I exit here, left")
+								if pos == self.position:
+									return 100
+								else:
+									return -100
+						else:
+							break
+					elif board[y - i][x - i] == 0:
+						if count == 0:
+							beginningSpace += 1
+						else:
+							space += 1
+						maxRow = y - i			
+			else:
+				pos = 0
+				diff = min(y, x) + 1
+				for i in range(diff):
+					if diff - i + count + beginningSpace + midSpace + endSpace + space >= 4:
+						if(board[y - i][x - i] != 0):
+							if pos == 0:
+								pos = board[y - i][x - i]
+							if(board[y - i][x - i] == pos):
+								count += 1
+								if count == 4:
+									#print("I exit here, left")
+									if pos == self.position:
+										return 100
+									else:
+										return -100	
+							else:
+								if space > 0:
+									endSpace += space
+								if (count > maxCount) & ((count + endSpace + midSpace + beginningSpace) >= 4):
+									maxCount = count
+									maxEndSpaces = endSpace
+									maxMidSpaces = midSpace
+									maxBeginningSpaces = beginningSpace
+									posOfMax = pos
+								elif count == maxCount:
+									if ((endSpace + midSpace + beginningSpace) > (maxEndSpaces + maxMidSpaces + beginningSpace)):
+										maxEndSpaces = endSpace
+										maxMidSpaces = midSpace
+										maxBeginningSpaces = beginningSpace
+										posOfMax = pos
+								pos = board[y - i][x - i]
+								count = 1
+								if space > 0:
+									endSpace += space
+									space = 0
+									midSpace = 0
+									beginningSpace = 0
+								else:
+									endSpace = 0
+									midSpace = 0
+									beginningSpace = 0
+						else:
+							if count == 0:
+								beginningSpace += 1
+							else:
+								space += 1
+							maxRow = y - i
+			if space > 0:
+				endSpace += space
+			if (count > maxCount) & ((count + endSpace + midSpace + beginningSpace) >= 4):
+				maxCount = count
+				maxEndSpaces = endSpace
+				maxMidSpaces = midSpace
+				maxBeginningSpaces = beginningSpace
+				maxRow = maxRow
+				posOfMax = pos
+			elif count == maxCount:
+				if ((endSpace + midSpace + beginningSpace) > (maxEndSpaces + maxMidSpaces + beginningSpace)):
+					maxEndSpaces = endSpace
+					maxMidSpaces = midSpace
+					maxBeginningSpaces = beginningSpace
+					maxRow = maxRow
+					posOfMax = pos
+			if(x < 6):
+				x += 1
+			else:
+				y -= 1
 			
-			left =  self.edgeCase(board, (leftRow - rowIter1), (leftCol - colIter1), rowIter1, colIter1, evalType)
-			right = self.edgeCase(board, (rightRow - rowIter2), (rightCol - colIter2), rowIter2, colIter2, evalType)
-			return max(left, right)
-
-	def vertThreat(self, board, row, col):
-		if row == 0:
-			threat = self.edgeCase(board, row, col, -1, 0, 1)
+		multiplier = self.getMultiplier(posOfMax, maxRow, 0)
+		if((maxEndSpaces + maxMidSpaces + maxBeginningSpaces) > 0):
+			if maxCount > 3:
+				threat = 100 * multiplier + (-5 * maxMidSpaces)
+			elif maxCount == 3:
+				if (maxMidSpaces == 0):
+					if (maxEndSpaces >= 1) & (maxBeginningSpaces >= 1):
+						threat = 99 * multiplier
+					else:
+						threat = 95 * multiplier
+				elif maxMidSpaces == 1:
+					threat = 95 * multiplier
+				else:
+					threat = 95 * multiplier + (-5 * maxMidSpaces)
+			elif maxCount == 2:
+				if (maxMidSpaces == 0):
+					if (maxEndSpaces >= 1):
+						if(maxBeginningSpaces >= 1):
+							threat = 80 * multiplier
+						else:
+							if(maxEndSpaces >= 2):
+								threat = 80 * multiplier
+							else:
+								threat = 0
+					else:
+						if(maxBeginningSpaces > 2):
+							threat = 80 * multiplier
+						else:
+							threat = 0
+				else:
+					if (maxMidSpaces + maxBeginningSpaces + maxEndSpaces) >= 2:
+						threat = 80 * multiplier
+					else:
+						threat = 0
+			else:
+				if (maxMidSpaces + maxBeginningSpaces + maxEndSpaces) > 2:
+					threat = 10 * multiplier
+				else:
+					threat = 0
 		else:
-			threat = self.middleCase(board, row, col, -1, 0, 1, 0, 1)
+			threat = 0
+		#print("I exit here, left")
+		# print("maxCount ", maxCount, ", numOfSpaces ", (maxBeginningSpaces + maxEndSpaces + maxMidSpaces), ", multiplier ", multiplier, ", threat", threat)
+		# print(board)
 		return threat
+	
+	def rightDiagWin(self, board):
+		count = 0
+		x = 0
+		y = 3
+		threat = 0
+		maxCount = 0
+		maxMidSpaces = 0
+		maxEndSpaces = 0
+		maxBeginningSpaces = 0
+		endSpace = 0
+		midSpace = 0
+		beginningSpace = 0
+		space = 0
+		maxRow = 0
+		posOfMax = 0
+		while x < 4:
+			endSpace = 0
+			midSpace = 0
+			beginningSpace = 0
+			space = 0
+			pos = 0
+			if(x == 3):
+				for i in range(4):
+					if(board[y - i][x + i] != 0):
+						if pos == 0:
+							pos = board[y - i][x + i]
+						if(board[y - i][x + i] == pos):
+							count += 1
+							if count == 4:
+								#print("I exit here, right")
+								if pos == self.position:
+									return 100
+								else:
+									return -100
+						else:
+							break
+				else:
+					if count == 0:
+						beginningSpace += 1
+					else:
+						space += 1
+					maxRow = y - i
 			
-	def horThreat(self, board, row, col):
-		if col == 0:
-			threat = self.edgeCase(board, row, col, 0, 1, 2)
-		elif col == (len(board[0]) - 1):
-			threat = self.edgeCase(board, row, col, 0, -1, 2)
+			elif (y == 3):
+				for i in range(4):
+					pos = board[y - i][x + i]
+					if(board[y - i][x + i] != 0):
+						if(board[y - i][x + i] == pos):
+							count += 1
+							if count == 4:
+								#print("I exit here, right")
+								if pos == self.position:
+									return 100
+								else:
+									return -100
+						else:
+							break
+					else:
+						if count == 0:
+							beginningSpace += 1
+						else:
+							space += 1
+						maxRow = y - i
+			else:
+				pos = 0
+				diff = min(y, x) + 1
+				for i in range(diff):
+					if diff - i + count + beginningSpace + midSpace + endSpace + space >= 4:
+						if(board[y - i][x - i] != 0):
+							if pos == 0:
+								pos = board[y][x]
+							if(board[y - i][x + i] == pos):
+								count += 1
+								if count == 4:
+									#print("I exit here, right")
+									if pos == self.position:
+										return 100
+									else:
+										return -100
+							else:
+								if space > 0:
+									endSpace += space
+								if (count > maxCount) & ((count + endSpace + midSpace + beginningSpace) > 4):
+									maxCount = count
+									maxEndSpaces = endSpace
+									maxMidSpaces = midSpace
+									maxBeginningSpaces = beginningSpace
+									posOfMax = pos
+								elif count == maxCount:
+									if ((endSpace + midSpace + beginningSpace) > (maxEndSpaces + maxMidSpaces + beginningSpace)):
+										maxEndSpaces = endSpace
+										maxMidSpaces = midSpace
+										maxBeginningSpaces = beginningSpace
+										posOfMax = pos
+								pos = board[y - i][x + i]
+								count = 1
+								if space > 0:
+									endSpace += space
+									space = 0
+									midSpace = 0
+								else:
+									endSpace = 0
+									midSpace = 0
+						else:
+							if count == 0:
+								beginningSpace += 1
+							else:
+								space += 1
+							maxRow = y - i
+			if space > 0:
+				endSpace += space
+			if (count > maxCount) & ((count + endSpace + midSpace + beginningSpace) >= 4):
+				maxCount = count
+				maxEndSpaces = endSpace
+				maxMidSpaces = midSpace
+				maxBeginningSpaces = beginningSpace
+				maxRow = maxRow
+				posOfMax = pos
+			elif count == maxCount:
+				if ((endSpace + midSpace + beginningSpace) > (maxEndSpaces + maxMidSpaces + beginningSpace)):
+					maxEndSpaces = endSpace
+					maxMidSpaces = midSpace
+					maxBeginningSpaces = beginningSpace
+					maxRow = maxRow
+					posOfMax = pos
+			if(y < 5):
+				y += 1
+			else:
+				x += 1
+		multiplier = self.getMultiplier(posOfMax, maxRow, 0)
+		if((maxEndSpaces + maxMidSpaces + maxBeginningSpaces) > 0):
+			if maxCount > 3:
+				threat = 100 * (-5 * maxMidSpaces) * multiplier
+			elif maxCount == 3:
+				if (maxMidSpaces == 0):
+					if (maxEndSpaces >= 1) & (maxBeginningSpaces >= 1):
+						threat = 99 * multiplier
+					else:
+						threat = 95 * multiplier
+				elif maxMidSpaces == 1:
+					threat = 95 * multiplier
+				else:
+					threat = 95 * (-5 * maxMidSpaces) * multiplier
+			elif maxCount == 2:
+				if (maxMidSpaces == 0):
+					if (maxEndSpaces >= 1):
+						if(maxBeginningSpaces >= 1):
+							threat = 80 * multiplier
+						else:
+							if(maxEndSpaces >= 2):
+								threat = 80 * multiplier
+							else:
+								threat = 0
+					else:
+						if(maxBeginningSpaces > 2):
+							threat = 80 * multiplier
+						else:
+							threat = 0
+				else:
+					if (maxMidSpaces + maxBeginningSpaces + maxEndSpaces) >= 2:
+						threat = 80 * multiplier
+					else:
+						threat = 0
+			else:
+				if (maxMidSpaces + maxBeginningSpaces + maxEndSpaces) > 2:
+					threat = 10 * multiplier
+				else:
+					threat = 0
 		else:
-			threat = self.middleCase(board, row, col, 0, -1, 0, 1, 2)
+			threat = 0	
+		# print("I exit here, right")
+		# print("maxCount ", maxCount, ", numOfSpaces ", (maxBeginningSpaces + maxEndSpaces + maxMidSpaces), ", multiplier ", multiplier, ", threat", threat)
+		# print(board)
 		return threat
 
-	def leftDiagThreat(self, board, row, col):
-		if(col == 0):
-			if(row < 3):
-				threat = self.edgeCase(board, row, col, 1, 1, 3)
-			else:
-				return 0
-		elif((col == len(board[0]) - 1)):
-			if (row >=  3):
-				threat = self.edgeCase(board,row,col, -1, -1, 3)
-			else:
-				return 0	
-		elif(row == 0):
-			if(col < 4):
-				threat = self.edgeCase(board,row,col, 1, 1, 3)
-			else:
-				return 0
-		elif(row == len(board) - 1):
-			if col >= 3:
-				threat = self.edgeCase(board,row,col, -1, -1, 3)
-			else:
-				return 0
-		else:
-			if (row == len(board) - 2 & col == 1) | (row == 1 & col == len(board[0]) - 2):
-				threat = self.middleCase(board,row,col, -1, -1, 1, 1, 3)
-			else:
-				return 0
-		return threat
-		
-	def rightDiagThreat(self, board, row, col):
-		if(col == 0):
-			if(row > 2):
-				threat = self.edgeCase(board, row, col, -1, 1, 3)
-			else:
-				return 0
-		elif((col == len(board[0]) - 1)):
-			if (row <  3):
-				threat = self.edgeCase(board, row, col, 1, -1, 3)
-			else:
-				return 0
-		elif(row == 0):
-			if(col >= 3):
-				threat = self.edgeCase(board, row, col, 1, -1, 3)
-			else:
-				return 0
-		elif(row == len(board)):
-			if col < 4:
-				threat = self.edgeCase(board, row, col, -1, 1, 3)
-			else:
-				return 0
-		else:
-			if (row == 1 & col == 1) | (row == len(board) - 2 & col == len(board[0]) - 2):
-				threat = self.middleCase(board,row,col, 1, -1, -1, 1, 3)
-			else:
-				return 0
-		return threat
-
-	def diagThreat(self, board, row, col):
-		left = self.leftDiagThreat(board, row, col)
-		right = self.rightDiagThreat(board, row, col)
-		if left[2] >= right[2]:
-			return left
-		else:
-			return right
-
-	def threats(self, board, row, col):
-		threats = []
-		threats.append(self.vertThreat(board, row, col))
-		threats.append(self.horThreat(board, row, col))
-		threats.append(self.diagThreat(board, row, col))
-		return max(threats)
+	def diagWin(self,board):
+		return max(self.leftDiagWin(board), self.rightDiagWin(board))
 
 	def evaluateBoard(self, board):
-		for row in range(len(board)):
-			for col in range(len(board[0])):
-				position = board[row][col]
-				gameOver = self.isGameOver(board, row, col, position)
-				if gameOver != 0:
-					return gameOver
-				else:
-					threats = self.threats(board, row, col)
-					return threats
+		hor = self.horWin(board) 
+		vert = self.vertWin(board) 
+		diag = self.diagWin(board)
+		threats = sorted([abs(hor), abs(vert), abs(diag)])
+		if threats[1] == threats[2]:
+			return 0
+		else:
+			if threats[2] == abs(hor):
+				#print("hor, ",hor)
+				return hor
+			elif threats[2] == abs(vert):
+				#print("vert, ",vert)
+				return vert
+			else:
+				#print("diag, ",diag)
+				return diag
+		# return max(hor, vert, diag)
+
 	
 	def maxValue(self, board, depth, curDepth):
 		"""The max part of the minimax algorithm, finds the move max would make
@@ -489,22 +740,29 @@ class minimaxAI(connect4Player):
 		leaves = []
 		if curDepth == 0:
 			for posMove in moves:
-				move = self.applyMove(board,posMove, position)
-				leaves.append(self.minValue(move,depth, curDepth + 1))
-			for node in leaves:
+				#print("hello")
+				cp = board.copy()
+				move = self.applyMove(cp, posMove, position)
+				leaves.append(self.minValue(move, depth, curDepth + 1))
+			for node in range(len(leaves)):
 				if leaves[node] == max(leaves):
-					return node
+					print("I return a move")
+					return moves[node]
 		elif curDepth == depth:
 			for posMove in moves:
-				move = self.applyMove(board,posMove, position)
+				#print("hi")
+				cp = board.copy()
+				move = self.applyMove(cp, posMove, position)
 				eval = self.evaluateBoard(move)
 				leaves.append(eval)
-			return max(abs(leaves))
+			return max(leaves)
 		else:
 			for posMove in moves:
-				move = self.applyMove(board,posMove, position)
-				leaves.append(self.minValue(move,depth, curDepth + 1))
-			return max(abs(leaves))
+				#print("hola")
+				cp = board.copy()
+				move = self.applyMove(cp,posMove, position)
+				leaves.append(self.minValue(move, depth, curDepth + 1))
+			return max(leaves)
 
 	def minValue(self, board, depth, curDepth):
 		"""The min part of the minimax algorithm, finds the move min would make
@@ -522,14 +780,18 @@ class minimaxAI(connect4Player):
 		leaves = []
 		if curDepth == depth:
 			for posMove in moves:
-				move = self.applyMove(board, posMove, position)
+				#print("arigato")
+				cp = board.copy()
+				move = self.applyMove(cp, posMove, position)
 				eval = self.evaluateBoard(move)
 				leaves.append(eval)
 			return min(leaves)
 		else:
 			for posMove in moves:
-				move = self.applyMove(board,posMove, position)
-				leaves.append(self.maxValue(move,depth, curDepth + 1))
+				#print("baka")
+				cp = board.copy()
+				move = self.applyMove(cp, posMove, position)
+				leaves.append(self.maxValue(move, depth, curDepth + 1))
 			return min(leaves)
 			
 	def getMove(self, board, depth):
