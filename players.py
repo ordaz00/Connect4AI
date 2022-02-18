@@ -705,11 +705,11 @@ class minimaxAI(connect4Player):
 		return threat
 
 	def diagWin(self,board):
-		return max(self.leftDiagWin(board), self.rightDiagWin(board))
+		return max(abs(self.leftDiagWin(board)), abs(self.rightDiagWin(board)))
 
 	def evaluateBoard(self, board):
-		hor = self.horWin(board) 
-		vert = self.vertWin(board) 
+		hor = self.horWin(board)
+		vert = self.vertWin(board)
 		diag = self.diagWin(board)
 		#print("hor: ", hor, ", vert: ", vert, ", diag: ", diag)
 		# threats = sorted([abs(hor), abs(vert), abs(diag)])
@@ -726,7 +726,14 @@ class minimaxAI(connect4Player):
 		# 		#print("diag, ",diag)
 		# 		return diag
 		#return max(hor, vert, diag)
-		return (hor + vert + diag)
+		if((hor == 1000) | (hor == -1000)):
+			return hor
+		elif((vert == 1000) | (vert == -1000)):
+			return vert
+		elif((diag == 1000) | (diag == -1000)):
+			return diag
+		else:
+			return (hor + vert + diag)
 	
 	def maxValue(self, board, depth, curDepth):
 		"""The max part of the minimax algorithm, finds the move max would make
@@ -873,7 +880,7 @@ class alphaBetaAI(connect4Player):
 		"""
 		#print(type(board))
 		listOfMoves = []
-		for col in range(6):
+		for col in range(7):
 			if board[0][col] == 0:
 				listOfMoves.append(col)
 		return listOfMoves
@@ -1468,7 +1475,7 @@ class alphaBetaAI(connect4Player):
 		return threat
 
 	def diagWin(self,board):
-		return max(self.leftDiagWin(board), self.rightDiagWin(board))
+		return max(abs(self.leftDiagWin(board)), abs(self.rightDiagWin(board)))
 
 	def evaluateBoard(self, board):
 		hor = self.horWin(board) 
@@ -1489,7 +1496,14 @@ class alphaBetaAI(connect4Player):
 		# 		#print("diag, ",diag)
 		# 		return diag
 		#return max(hor, vert, diag)
-		return (hor + vert + diag)
+		if((hor == 1000) | (hor == -1000)):
+			return hor
+		elif((vert == 1000) | (vert == -1000)):
+			return vert
+		elif((diag == 1000) | (diag == -1000)):
+			return diag
+		else:
+			return (hor + vert + diag)
 	
 	def maxValue(self, board, depth, alpha, beta, curDepth):
 		"""The max part of the minimax algorithm, finds the move max would make
@@ -1502,55 +1516,46 @@ class alphaBetaAI(connect4Player):
 		Returns:
 			[int]: [the value of max's best move]
 		"""
-		position = self.position		
+		maxEval = -inf
 		successor = [3,2,4,1,5,0,6]
-		leaves = []
 		moves = self.possibleMoves(board)
-		if len(moves) > 0:
+		#print("I make it here, ",depth, ", ", curDepth)
+		if(len(moves) > 0):
 			if curDepth == 0:
+				bestMove = 0
 				for posMove in successor:
 					if posMove in moves:
-						#print("hello")
-						cp = board.copy()
-						move = self.applyMove(cp, posMove, position)
-						leaves.append(self.minValue(move, depth, alpha, beta, curDepth + 1))
-				for node in range(len(leaves)):
-					if leaves[node] == max(leaves):
-						#print("I return a move")
-						return moves[node]
-			gameOver = self.evaluateBoard(board)
-			if (gameOver == 1000) | (gameOver == -1000):		
-				#print("found gameOver, ", gameOver)
-				return gameOver
+						move = self.applyMove(board, posMove, self.position)
+						eval = self.minValue(move, depth, alpha, beta, curDepth + 1)
+						maxEval = max(maxEval, eval)
+						alpha = max(alpha, eval)
+						if beta <= alpha:
+							break
+						bestMove = posMove
+				print(bestMove)
+				return bestMove
 			else:
-				if curDepth == depth:
-					# for posMove in successor:
-					# 	if posMove in moves:
-					# 	#print("hi")
-					# 		cp = board.copy()
-					# 		move = self.applyMove(cp, posMove, position)
-					# 		eval = self.evaluateBoard(move)
-					# 	if eval >= beta:
-					# 		return eval
-					# 	else:
-					# 		alpha = max(alpha, v)
-					# return eval
-					return self.evaluateBoard(board)
+				boardEval = self.evaluateBoard(board)
+				if (boardEval == 1000) | (boardEval == -1000):
+					#print(boardEval)
+					return boardEval
+				elif(depth == curDepth):
+					#print(boardEval)
+					return boardEval
 				else:
+					#print("i evaluated the board, and got bobkiss at, ", depth, ", ", curDepth)
 					for posMove in successor:
 						if posMove in moves:
-							#print("hola")
-							cp = board.copy()
-							move = self.applyMove(cp,posMove, position)
-							leaves.append(self.minValue(move, depth, alpha, beta, curDepth + 1))
-							eval = max(leaves)
-						if eval >= beta:
-							return eval
-						else:
+							move = self.applyMove(board, posMove, self.position)
+							eval = self.minValue(move, depth, alpha, beta, curDepth + 1)
+							maxEval = max(maxEval, eval)
 							alpha = max(alpha, eval)
-					return eval
+							if beta <= alpha:
+								break
+					return maxEval
 		else:
 			return 0
+
 
 	def minValue(self, board, depth, alpha, beta, curDepth):
 		"""The min part of the minimax algorithm, finds the move min would make
@@ -1563,40 +1568,27 @@ class alphaBetaAI(connect4Player):
 		Returns:
 			[int]: [the value of min's best move]
 		"""
-		position = self.opponent.position
-		leaves = []
-		successor = [3,2,4,1,5,0,6]
-		moves = self.possibleMoves(board)
-		if len(moves) > 0:
-			gameOver = self.evaluateBoard(board)
-			if (gameOver == 1000) | (gameOver == -1000):
-				#print("found gameOver, ", gameOver)
-				return gameOver
-			else:
-				if curDepth == depth:
-					# for posMove in moves:
-					# 	#print("arigato")
-					# 	cp = board.copy()
-					# 	move = self.applyMove(cp, posMove, position)
-					# 	eval = self.evaluateBoard(move)
-					# 	leaves.append(eval)
-					# return min(leaves)
-					return self.evaluateBoard(board)
-				else:
-					for posMove in successor:
-						if posMove in moves:
-							#print("baka")
-							cp = board.copy()
-							move = self.applyMove(cp, posMove, position)
-							leaves.append(self.maxValue(move, depth, alpha, beta, curDepth + 1))
-							eval = min(leaves)	
-						if eval <= alpha:
-							return eval
-						else:
-							beta = max(beta, eval)
-					return eval
+		boardEval = self.evaluateBoard(board)
+		if (boardEval == 1000) | (boardEval == -1000):
+			return boardEval
+		elif(depth == curDepth):
+			return boardEval
 		else:
-			return 0
+			minEval = inf
+			successor = [3,2,4,1,5,0,6]
+			moves = self.possibleMoves(board)
+			if(len(moves) > 0):
+				for posMove in successor:
+					if posMove in moves:
+						move = self.applyMove(board, posMove, self.opponent.position)
+						eval = self.maxValue(move, depth, alpha, beta, curDepth + 1)
+						minEval = min(minEval, eval)
+						beta = min(beta, eval)
+						if beta <= alpha:
+							break
+				return minEval
+			else:
+				return 0
 			
 	def getMove(self, board, depth):
 		"""Employs the minimax algorithm to find the position of the best move at the depth that's being searching too
