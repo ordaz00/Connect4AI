@@ -1532,7 +1532,7 @@ class alphaBetaAI(connect4Player):
 						if beta <= alpha:
 							break
 						bestMove = posMove
-				print(bestMove)
+				#print(bestMove)
 				return bestMove
 			else:
 				boardEval = self.evaluateBoard(board)
@@ -1609,7 +1609,7 @@ class alphaBetaAI(connect4Player):
 			env (connect4): [the connect 4 object, that is used to create and play the game]
 			move (list): [a list that will contain the column that will be played]
 		"""
-		depth = 2
+		depth = 4
 		board = env.getBoard()
 		if(self.isFirstMove(board)):
 			move[:] = [3]
