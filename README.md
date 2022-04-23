@@ -1,2 +1,2 @@
 # PA2
-ECS 170 Programming Assignment 2
+Using classic AI techniques to create a connect 4 AI
